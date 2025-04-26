@@ -169,7 +169,6 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
 
     if (_isDecommissioned(_circle)) revert NotCommissioned();
 
-    return _circle;
   }
 
   /**
