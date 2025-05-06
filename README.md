@@ -36,7 +36,7 @@
   <li>Make use of `setUp` overrides and inheritance to cut down on redundant setups.</li>
   <li>Make use of helper functions with obvious names (e.g. `_fundUsersWithTokens()`) to reduce complexity for other developers that will review the code.</li>
   <li>Make use of Modifiers within test contracts to constrain fuzzing variables or any other use case</li>
-  <li>Make multiple testing contracts in one file that all test the same contract (e.g. E2EGreeterTestSetup, E2EGreeterTestAccessControl, E2EGreeterTestCore, etc.) where contracts inherit the same base setup.</li>
+  <li>Make multiple testing contracts in one file that all test the same contract (e.g. E2ETestSetup, E2ETestAccessControl, E2ETestCore, etc.) where contracts inherit the same base setup.</li>
   <li>Make use of constant variables placed in base test setup, so that updating test variables is simple and easy.</li>
   <li>Keep tests organized! Break complexity down and make it readable!</li>
 
@@ -61,7 +61,7 @@
 
 <dl>
   <dt>Sample contracts</dt>
-  <dd>Basic Greeter contract with an external interface.</dd>
+  <dd>Example contract implementations with external interfaces.</dd>
 
   <dt>Foundry setup</dt>
   <dd>Foundry configuration with multiple custom profiles and remappings.</dd>
@@ -131,11 +131,7 @@ In order to just run integration tests, run:
 yarn test:integration
 ```
 
-In order to just run the echidna fuzzing campaign (requires [Echidna](https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/introduction/installation.md) installed), run:
-
-```bash
-yarn test:fuzz
-```
+In order to just run the echidna fuzzing campaign (requires [Echidna](https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/introduction/installation.md) installed), you'll need to create a fuzz test first, then update the test:fuzz script in package.json.
 
 In order to just run the symbolic execution tests (requires [Halmos](https://github.com/a16z/halmos/blob/main/README.md#installation) installed), run:
 
