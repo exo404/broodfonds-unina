@@ -66,7 +66,7 @@ interface ISavingCircles {
   event TokenAllowed(address indexed token, bool indexed allowed);
 
   /**
-   * @notice Thrown when a member attempts to deposit funds into a circle
+   * @notice Thrown when a member attempts to redundantly deposit funds into a circle
    */
   error AlreadyDeposited();
 
