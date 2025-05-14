@@ -73,12 +73,12 @@ interface ISavingCircles {
                             VIEW
   //////////////////////////////////////////////////////////////*/
 
-  function getCircle(uint256 id) external view returns (Circle memory);
-  function getCircles(uint256[] calldata ids) external view returns (Circle[] memory);
-  function getMemberCircles(address member) external view returns (uint256[] memory);
-  function getMemberBalances(uint256 id) external view returns (address[] memory, uint256[] memory);
-  function checkMemberships(address member, uint256[] calldata ids) external view returns (bool[] memory);
-  function isTokenAllowed(address token) external view returns (bool);
-  function isWithdrawable(uint256 id) external view returns (bool);
-  function withdrawableBy(uint256 id) external view returns (address);
+  function getCircle(uint256 id) external view returns (Circle memory circle);
+  function getCircles(uint256[] calldata ids) external view returns (Circle[] memory circles);
+  function getMemberCircles(address member) external view returns (uint256[] memory circles);
+  function getMemberBalances(uint256 id) external view returns (address[] memory members, uint256[] memory balances);
+  function checkMemberships(address member, uint256[] calldata ids) external view returns (bool[] memory memberships);
+  function isTokenAllowed(address token) external view returns (bool allowed);
+  function isWithdrawable(uint256 id) external view returns (bool withdrawable);
+  function withdrawableBy(uint256 id) external view returns (address withdrawableBy);
 }
