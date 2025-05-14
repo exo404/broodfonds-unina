@@ -2,14 +2,9 @@
 pragma solidity ^0.8.28;
 
 import {OwnableUpgradeable} from '@openzeppelin-upgradeable/access/OwnableUpgradeable.sol';
-import {ProxyAdmin} from '@openzeppelin/proxy/transparent/ProxyAdmin.sol';
-import {TransparentUpgradeableProxy} from '@openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol';
-import {Test} from 'forge-std/Test.sol';
 
 import {ISavingCircles} from '../../src/interfaces/ISavingCircles.sol';
 import {IntegrationBase} from 'test/integration/IntegrationBase.sol';
-
-/* solhint-disable func-name-mixedcase */
 
 contract SavingCirclesIntegration is IntegrationBase {
   function setUp() public override {

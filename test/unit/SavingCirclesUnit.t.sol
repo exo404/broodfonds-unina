@@ -10,8 +10,6 @@ import {Test} from 'forge-std/Test.sol';
 import {MockERC20} from '../mocks/MockERC20.sol';
 import {ISavingCircles, SavingCircles} from 'contracts/SavingCircles.sol';
 
-/* solhint-disable func-name-mixedcase */
-
 contract SavingCirclesUnit is Test {
   uint256 public constant BASE_CURRENT_INDEX = 0;
   uint256 public constant DEPOSIT_AMOUNT = 1 ether;
