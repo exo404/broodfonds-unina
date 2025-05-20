@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IBroodfonds {
+interface IBreadfonds {
   /*///////////////////////////////////////////////////////////////
                             STRUCTS
   //////////////////////////////////////////////////////////////*/
 
-  struct Fond {
+  struct Breadfonds {
     address owner;
     string name;
     address token;
@@ -16,20 +16,20 @@ interface IBroodfonds {
     uint256 maxWithdraws;
     address[] members;
     uint256[] depositAmount;
-    uint256 fondStart;
+    uint256 breadfondStart;
   }
 
   /*///////////////////////////////////////////////////////////////
                             EVENTS
   //////////////////////////////////////////////////////////////*/
 
-  event BroodfondsCreated(
+  event BreadfondsCreated(
     uint256 indexed id, address[] members, address token, uint256 initialDeposit, 
     uint256 depositInterval, uint256 fixedDeposit, uint256 maxwithdraws
   );
-  event BroodfondsDecommissioned(uint256 indexed id);
-  event FundsDeposited(uint256 indexed id, address indexed member, uint256 amount);
-  event FundsWithdrawn(uint256 indexed id, address indexed member, uint256 amount);
+  event BreadfondsDecommissioned(uint256 indexed id);
+  event BreadfondsDeposited(uint256 indexed id, address indexed member, uint256 amount);
+  event BreadfondsWithdrawn(uint256 indexed id, address indexed member, uint256 amount);
   event TokenAllowed(address indexed token, bool indexed allowed);
 
   /*///////////////////////////////////////////////////////////////
@@ -46,13 +46,13 @@ interface IBroodfonds {
   error NotWithdrawable();
   error TransferFailed();
   error DepositWindowClosed();
-  error BroodfondsExpired();
+  error BreadfondsExpired();
   error ExceedsDepositAmount();
-  error DepositBeforeBroodfondsStart();
+  error DepositBeforeBreadfondsStart();
   error TokenNotAllowed();
   error InvalidDepositInterval();
   error InvalidDepositAmount();
-  error InvalidBroodfondsStartTime();
+  error InvalidBreadfondsStartTime();
   error InvalidCurrentIndex();
   error InvalidOwner();
   error InvalidMemberCount();
@@ -62,26 +62,30 @@ interface IBroodfonds {
   error InvalidInitialDeposit();
   error InvalidFixedDeposit();
   error InvalidMaxWithdraws();
+
+
+// DA RIVEDERE QUESTE FUNZIONI
+
   /*///////////////////////////////////////////////////////////////
                             VIEW
   //////////////////////////////////////////////////////////////*/
 
   function initialize(address owner) external;
   function setTokenAllowed(address token, bool allowed) external;
-  function create(Fond memory fond) external returns (uint256);
+  function create(Breadfonds memory fond) external returns (uint256);
   function deposit(uint256 id, uint256 value) external;
-  function depositFor(uint256 id, uint256 value, address member) external;
   function withdraw(uint256 id) external;
-  function withdrawFor(uint256 id, address member) external;
+  function withdrawable(uint256 id) external returns (bool);
   function decommission(uint256 id) external;
+  function vote(uint256 id) external returns (bool);
 
   /*///////////////////////////////////////////////////////////////
                             VIEW
   //////////////////////////////////////////////////////////////*/
 
-  function getFond(uint256 id) external view returns (Fond memory);
-  function getFonds(uint256[] calldata ids) external view returns (Fond[] memory);
-  function getMemberCircles(address member) external view returns (uint256[] memory);
+  function getBreadfonds(uint256 id) external view returns (Breadfonds memory);
+  function getBreadfonds(uint256[] calldata ids) external view returns (Breadfonds[] memory);
+  function getMemberBreadfonds(address member) external view returns (uint256[] memory);
   function getMemberBalances(uint256 id) external view returns (address[] memory, uint256[] memory);
   function checkMemberships(address member, uint256[] calldata ids) external view returns (bool[] memory);
   function isTokenAllowed(address token) external view returns (bool);
