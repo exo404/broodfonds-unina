@@ -195,11 +195,6 @@ interface IBreadfund {
   /// @param id ID of the Breadfund to decommission
   function decommission(uint256 id) external;
 
-  /// @notice Registers a user to a Breadfund with an initial contribution
-  /// @param id The Breadfund ID
-  /// @param contribute The initial amount to contribute
-  function register(uint256 id, uint256 contribute) external;
-
   /// @notice Makes a deposit into a Breadfund
   /// @param id The Breadfund ID
   /// @param value Amount to deposit

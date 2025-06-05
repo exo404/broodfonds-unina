@@ -125,28 +125,6 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   }
 
   /// @inheritdoc IBreadfund
-  function register(uint256 _id, uint256 _contribute) external override {
-    Breadfund memory _breadfund = breadfunds[_id];
-
-    if (_isDecommissioned(_breadfund)) revert NotCommissioned();
-    if (isMember[_id][msg.sender]) revert AlreadyExists();
-    if (_breadfund.members.length == MAXIMUM_MEMBERS) revert InvalidMemberCount();
-    if (_contribute < MINIMUM_CONTRIBUTE) revert InvalidDeposit();
-    if (_contribute > MAXIMUM_CONTRIBUTE) revert InvalidDeposit();
-
-    _payInitialDeposit(_id);
-    _deposit(_id, _contribute, msg.sender);
-
-    breadfunds[_id].members.push(msg.sender);
-    isMember[_id][msg.sender] = true;
-    memberBreadfunds[msg.sender].push(_id);
-    breadfundMemberContribute[_id][msg.sender] = _contribute;
-    breadfundMonthPayed[_id][msg.sender] = true;
-
-    emit NewBreadfundMember(_id, msg.sender, _contribute);
-  }
-
-  /// @inheritdoc IBreadfund
   function isTokenAllowed(address _token) external view override returns (bool) {
     return allowedTokens[_token];
   }
@@ -189,14 +167,6 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     }
 
     return (_breadfund.members, _balances);
-  }
-
-  /// @dev Make a one-time deposit to register successfully to the Breadfund
-  function _payInitialDeposit(uint256 _id) internal nonReentrant {
-    Breadfund memory _breadfund = breadfunds[_id];
-    breadfundBalance[_id] += _breadfund.initialDeposit;
-    bool _success = IERC20(msg.sender).transfer(_breadfund.token, _breadfund.initialDeposit);
-    if (!_success) revert TransferFailed();
   }
 
   /// @dev Make a deposit for monthly contribute + administrative fee
