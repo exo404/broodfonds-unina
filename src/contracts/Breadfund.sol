@@ -54,6 +54,9 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
 
   /// @notice Records the current balance of each member within a specific Breadfund
   mapping(uint256 id => mapping(address member => uint256 balance)) public balances;
+
+  /// @notice Tracks whether a member has made their first deposit in a specific Breadfund
+  mapping(uint256 id => mapping(address member => bool hasDeposited)) public hasMadeFirstDeposit;
   
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -195,17 +198,29 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     return (_breadfund.members, _balances);
   }
 
-  /// @dev Make a deposit for monthly contribute + administrative fee
+  /**
+   * @dev Make a deposit for monthly contribute
+   *      If it's the first deposit, initialDeposit amount is added to the total amount
+   *      The method "transferFrom()" Requires "approve()" front-end side
+   */
   function _deposit(uint256 _id, uint256 _value, address _member) internal {
     Breadfund memory _breadfund = breadfunds[_id];
 
     if (_breadfund.owner == address(0)) revert NotCommissioned();
-    if (!isMember[_id][msg.sender]) revert NotMember();
+    if (!isMember[_id][_member]) revert NotMember();
     if (_value <= 0) revert InvalidDepositAmount();
     if (block.timestamp < _breadfund.breadfundStart) revert DepositBeforeBreadfundStart();
 
-    breadfundBalance[_id] += _value + _breadfund.fixedDeposit;
-    bool _success = IERC20(_member).transfer(_breadfund.token, _value + _breadfund.fixedDeposit);
+    uint256 _totalDeposit = _value + _breadfund.fixedDeposit;
+
+    if (!hasMadeFirstDeposit[_id][_member]) {
+        _totalDeposit += _breadfund.initialDeposit;
+        hasMadeFirstDeposit[_id][_member] = true;
+    }
+
+    breadfundBalance[_id] += _totalDeposit;
+
+    bool _success = IERC20(_breadfund.token).transferFrom(_member, address(this), totalDeposit);
     if (!_success) revert TransferFailed();
   }
 
