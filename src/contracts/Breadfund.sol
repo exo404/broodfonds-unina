@@ -46,7 +46,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   /// @notice Tracks personal savings of each member in a given Breadfund
   mapping(uint256 id => mapping(address member => uint256 monthlyContribute)) public breadfundMemberContribute;
 
-  /// @notice Tracks personal savings of each member in a given Breadfund
+  /// @notice Tracks withdrawable amount for each member in a given Breadfund
   mapping(uint256 id => mapping(address member => uint256 withdrawableBalance)) public memberWithdrawableBalance;
 
   /// @notice Tracks whether each member has paid their monthly contribution for a specific Breadfund
