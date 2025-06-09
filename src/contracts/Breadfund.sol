@@ -46,6 +46,9 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   /// @notice Tracks personal savings of each member in a given Breadfund
   mapping(uint256 id => mapping(address member => uint256 monthlyContribute)) public breadfundMemberContribute;
 
+  /// @notice Tracks personal savings of each member in a given Breadfund
+  mapping(uint256 id => mapping(address member => uint256 withdrawableBalance)) public memberWithdrawableBalance;
+
   /// @notice Tracks whether each member has paid their monthly contribution for a specific Breadfund
   mapping(uint256 id => mapping(address member => bool status)) public breadfundMonthPayed;
 
@@ -222,11 +225,14 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     uint256 _totalDeposit = _value + _breadfund.fixedDeposit;
 
     if (!hasMadeFirstDeposit[_id][_member]) {
+      breadfundMemberContribute[_id][_member] = _value;
       _totalDeposit += _breadfund.initialDeposit;
       hasMadeFirstDeposit[_id][_member] = true;
     }
 
     breadfundBalance[_id] += _totalDeposit;
+
+    memberWithdrawableBalance[_id][_member] += (_value * 200) / 9
 
     bool _success = IERC20(_breadfund.token).transferFrom(_member, address(this), _totalDeposit);
     if (!_success) revert TransferFailed();
@@ -244,10 +250,17 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
 
     if (_breadfund.owner == address(0)) revert NotCommissioned();
     if (!isMember[_id][_member]) revert NotMember();
-
+    if (claimedDays[_id][_member] == MAXIMUM_CLAIMABLE_DAYS) revert NotWithdrawable();
+    
     uint256 _withdrawAmount = _getDailyWithdrawalAmount(_id, _member);
 
-    /// TBD
+    if (_withdrawAmount > memberWithdrawableBalance[_id][_member]) revert NotWithdrawable();
+
+    claimedDays[_id][_member] += 1;
+    memberWithdrawableBalance[_id][_member] -= _withdrawAmount;
+
+    bool success = IERC20(_breadfund.token).transfer(_member, _withdrawAmount);
+    if (!success) revert TransferFailed();
 
     emit FundsWithdrawn(_id, _member, _withdrawAmount);
   }
@@ -257,8 +270,6 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     uint256 _memberContribute = breadfundMemberContribute[_id][_member];
 
     uint256 _monthlyWithdrawalAmount = (_memberContribute * 200) / 9;
-
-    // Potremmo salvare il monthlyWithdrawalAmount (oppure il dailyWithdrawalAmount) in un mapping?
 
     return _monthlyWithdrawalAmount / 30;
   }
