@@ -6,14 +6,13 @@ import {IERC20} from '@openzeppelin/token/ERC20/IERC20.sol';
 import {ReentrancyGuard} from '@openzeppelin/utils/ReentrancyGuard.sol';
 
 import {IBreadfund} from '../interfaces/IBreadfund.sol';
-import {BokkyPooBahsDateTimeContract} from '../utility/BokkyPooBahsDateTimeContract_flattened_v1.00.sol';
 
 /// @title Breadfund
 /// @notice Simple implementation of a Broodfond for ERC20 tokens
 /// @author @exo404
 /// @author @valeriooconte
 /// @author @RonTuretzky
-contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooBahsDateTimeContract {
+contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   /// @notice Minimum number of members required to create a Breadfund
   uint256 public constant MINIMUM_MEMBERS = 25;
 
@@ -22,6 +21,9 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
 
   /// @notice ID counter used to assign unique identifiers to each Breadfund
   uint256 public nextId;
+
+  /// @notice ID counter used to assign unique identifiers to each request
+  uint256 public nextIdRequest;
 
   /// @notice Stores all created Breadfunds indexed by their unique ID
   mapping(uint256 id => Breadfund breadfund) public breadfunds;
@@ -47,12 +49,21 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
   /// @notice Indicates whether a specific ERC20 token is allowed for use in Breadfunds
   mapping(address token => bool status) public allowedTokens;
 
-  /// @notice Records the current balance of each member within a specific Breadfund
-  mapping(uint256 id => mapping(address member => uint256 balance)) public balances;
-
   /// @notice Tracks whether a member has made their first deposit in a specific Breadfund
   mapping(uint256 id => mapping(address member => bool hasDeposited)) public hasMadeFirstDeposit;
-  
+
+  /// @notice Lists all requests indexed by their unique ID
+  mapping(uint256 idReq => Request request) public requests;
+
+  /// @notice Records votes for each request, mapping request ID to member address and their vote status
+  mapping(uint256 idReq => mapping(address member => bool status)) public requestVotes;
+
+  /// @notice Tracks if a request has been contested
+  mapping(uint256 id => bool contested) public isContested;
+
+  /// @notice Tracks if a request has been verified (voting phase is over)
+  mapping(uint256 id => bool voted) public isVoted;
+
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -106,7 +117,8 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
       _breadfund.depositInterval,
       _breadfund.fixedDeposit,
       _breadfund.maxWithdrawals,
-      _breadfund.ratio
+      _breadfund.ratio,
+      _breadfund.autoThreshold
     );
     return _id;
   }
@@ -136,8 +148,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
       address _member = _breadfund.members[i];
       uint256 _amount = breadfundMemberContribute[_id][_member] / _totalDeposits * breadfundBalance[_id];
       if (_amount > 0) {
-        bool success = IERC20(_breadfund.token).transfer(_member, _amount);
-        if (!success) revert TransferFailed();
+        require(IERC20(_breadfund.token).transfer(_member, _amount), TransferFailed());
       }
     }
 
@@ -161,6 +172,61 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
   }
 
   /// @inheritdoc IBreadfund
+  function contest(uint256 _requestId) external override nonReentrant {
+    Request storage _request = requests[_requestId];
+
+    if (_request.owner == address(0)) revert InvalidRequest();
+    if (!_isContestable(_requestId)) revert ContestWindowClosed();
+    if (isContested[_requestId]) revert AlreadyContested();
+
+    isContested[_requestId] = true;
+
+    emit WithdrawalContested(_requestId, _request.owner, block.timestamp);
+  }
+
+  /// @inheritdoc IBreadfund
+  function checkContestWindow(uint256 _idRequest) external override {
+    Request memory _request = requests[_idRequest];
+    if (!_isContestable(_idRequest) && !isContested[_idRequest]) {
+      Breadfund memory _breadfund = breadfunds[_request.breadfundId];
+      require(IERC20(_breadfund.token).transfer(_request.owner, _request.amount), TransferFailed());
+      emit WithdrawalAutoExecuted(_idRequest, _request.owner, _request.amount);
+    } else if (isContested[_idRequest]) {
+      emit WithdrawalContested(_idRequest, _request.owner, block.timestamp);
+    }
+  }
+
+  function vote(uint256 _requestId, bool _vote) external override nonReentrant {
+    if (requests[_requestId].owner == address(0)) revert InvalidRequest();
+    if (!isMember[requests[_requestId].breadfundId][msg.sender]) revert NotMember();
+    if (requestVotes[_requestId][msg.sender]) revert AlreadyVoted();
+    if (!_isVotingOngoing(_requestId)) revert VotingWindowClosed();
+
+    if (_vote) {
+      requests[_requestId].yesVotes++;
+    } else {
+      requests[_requestId].noVotes++;
+    }
+    requestVotes[_requestId][msg.sender] = true;
+    emit Voted(_requestId, msg.sender, _vote);
+  }
+  /// @inheritdoc IBreadfund
+
+  function checkVotingWindow(uint256 _idRequest) external override {
+    Request memory _request = requests[_idRequest];
+    if (!_isVotingOngoing(_idRequest) && !isVoted[_idRequest]) {
+      isVoted[_idRequest] = true;
+      Breadfund memory _breadfund = breadfunds[_request.breadfundId];
+      if (_request.yesVotes > _breadfund.members.length * 66 / 100) {
+        require(IERC20(_breadfund.token).transfer(_request.owner, _request.amount), TransferFailed());
+        emit WithdrawalApproved(_idRequest, _request.owner, _request.amount);
+      } else {
+        emit WithdrawalRejected(_idRequest, _request.owner, _request.amount);
+      }
+    }
+  }
+  /// @inheritdoc IBreadfund
+
   function isTokenAllowed(address _token) external view override returns (bool) {
     return allowedTokens[_token];
   }
@@ -199,7 +265,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
 
     _balances = new uint256[](_breadfund.members.length);
     for (uint256 i = 0; i < _breadfund.members.length; i++) {
-      _balances[i] = balances[_id][_breadfund.members[i]];
+      _balances[i] = memberWithdrawableBalance[_id][_breadfund.members[i]];
     }
 
     return (_breadfund.members, _balances);
@@ -230,23 +296,35 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
 
     memberWithdrawableBalance[_id][_member] += _value * _breadfund.ratio;
 
-    bool _success = IERC20(_breadfund.token).transferFrom(_member, address(this), _totalDeposit);
-    if (!_success) revert TransferFailed();
+    require(IERC20(_breadfund.token).transferFrom(_member, address(this), _totalDeposit), TransferFailed());
 
     emit FundsDeposited(_id, _member, _totalDeposit);
+  }
+  /// @dev
+
+  function _createRequest(Request memory _request) internal returns (uint256) {
+    uint256 _idRequest = nextIdRequest++;
+
+    if (requests[_idRequest].owner != address(0)) revert AlreadyExists();
+    if (breadfunds[_request.breadfundId].owner == address(0)) revert NotCommissioned();
+
+    requests[_idRequest] = _request;
+
+    emit RequestCreated(_idRequest, _request.owner, _request.timestamp, _request.amount);
+    return _idRequest;
   }
 
   /**
    * @dev Make a withdrawal
-   *      
-   *      
+   *
+   *
    */
   function _withdraw(uint256 _id, address _member, uint256 _daysRequested) internal {
     Breadfund memory _breadfund = breadfunds[_id];
 
     if (_breadfund.owner == address(0)) revert NotCommissioned();
     if (!isMember[_id][_member]) revert NotMember();
-    
+
     uint256 _dailyWithdrawableAmount = _getDailyWithdrawableAmount(_id, _member, _breadfund.ratio);
 
     uint256 _withdrawAmount = _dailyWithdrawableAmount * _daysRequested;
@@ -256,35 +334,40 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable, BokkyPooB
     if (_isSmall(_breadfund.autoThreshold, _withdrawAmount)) {
       memberWithdrawableBalance[_id][_member] -= _withdrawAmount;
 
-      require(IERC20(_breadfund.token).transfer(_member, _withdrawAmount),TransferFailed());
+      require(IERC20(_breadfund.token).transfer(_member, _withdrawAmount), TransferFailed());
 
       emit FundsWithdrawn(_id, _member, _withdrawAmount);
     } else {
-      // TBD
-
-      emit WithdrawalPending();
+      Request memory _request = Request({
+        owner: _member,
+        breadfundId: _id,
+        timestamp: block.timestamp,
+        yesVotes: 0,
+        noVotes: 0,
+        amount: _withdrawAmount
+      });
+      uint256 _idRequest = _createRequest(_request);
+      emit WithdrawalPending(_idRequest, _member, _withdrawAmount);
     }
-  }
-
-  /// @dev
-  function _createRequest(Request memory request) internal returns (uint256) {
-    // TBD
   }
 
   /// @dev Calculates the daily withdrawal for a member in a Breadfund
   function _getDailyWithdrawableAmount(uint256 _id, address _member, uint256 _ratio) internal view returns (uint256) {
     uint256 _memberContribute = breadfundMemberContribute[_id][_member];
-
     uint256 _monthlyWithdrawalAmount = _memberContribute * _ratio;
+    return _monthlyWithdrawalAmount / 30;
+  }
 
-    uint256 _timestamp = block.timestamp;
+  /// @dev Check if a request is contestable by comparing the current timestamp with the request's timestamp and the contest window
+  function _isContestable(uint256 _idRequest) internal view returns (bool) {
+    Request memory _request = requests[_idRequest];
+    return block.timestamp <= (_request.timestamp + breadfunds[_request.breadfundId].contestWindow);
+  }
 
-    uint256 _currentYear = getYear(_timestamp);
-    uint256 _currentMonth = getMonth(_timestamp);
-
-    uint256 _daysInCurrentMonth = _getDaysInMonth(_currentYear, _currentMonth);
-
-    return _monthlyWithdrawalAmount / _daysInCurrentMonth;
+  /// @dev Check if a request's voting window is open by comparing the current timestamp with the request's timestamp and the voting window
+  function _isVotingOngoing(uint256 _idRequest) internal view returns (bool) {
+    Request memory _request = requests[_idRequest];
+    return block.timestamp <= (_request.timestamp + breadfunds[_request.breadfundId].votingWindow);
   }
 
   /// @dev
