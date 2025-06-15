@@ -19,7 +19,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   /// @notice Maximum number of members allowed in a Breadfund
   uint256 public constant MAXIMUM_MEMBERS = 50;
 
-  /// @notice 
+  /// @notice Number of days in a month (used for calculating monthly withdrawals)
   uint256 public constant DAYS_IN_A_MONTH = 30;
 
   /// @notice ID counter used to assign unique identifiers to each Breadfund
@@ -298,8 +298,12 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
 
     emit FundsDeposited(_id, _member, _totalDeposit);
   }
-  /// @dev
 
+  /**
+   * @dev Create a request for withdrawal
+   * @param _request The request to be created
+   * @return _idRequest The ID of the created request
+   */
   function _createRequest(Request memory _request) internal returns (uint256) {
     uint256 _idRequest = nextIdRequest++;
 
@@ -314,8 +318,11 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
 
   /**
    * @dev Make a withdrawal
-   *
-   *
+    * @param _id The ID of the Breadfund
+    * @param _member The address of the member making the withdrawal
+    * @param _daysRequested The number of days for which the member is requesting a withdrawal
+    * @notice If the requested amount is small, it is transferred directly to the member
+    *         If the requested amount is large, a request is created for approval
    */
   function _withdraw(uint256 _id, address _member, uint256 _daysRequested) internal {
     Breadfund memory _breadfund = breadfunds[_id];
