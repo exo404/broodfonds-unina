@@ -123,6 +123,8 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   function decommission(uint256 _id) external override nonReentrant {
     Breadfund memory _breadfund = breadfunds[_id];
 
+    require(condition(_breadfund.owner == msg.sender), NotDecomissionable());
+
     uint256 _breadfundMembersLength = _breadfund.members.length;
 
     uint256 _balance = breadfundBalance[_id];
