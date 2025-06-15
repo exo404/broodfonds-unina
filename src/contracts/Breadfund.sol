@@ -177,6 +177,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
 
     if (_request.owner == address(0)) revert InvalidRequest();
     if (!_isContestable(_requestId)) revert ContestWindowClosed();
+    if (!isMember[requests[_requestId].breadfundId][msg.sender]) revert NotMember();
     if (isContested[_requestId]) revert AlreadyContested();
 
     isContested[_requestId] = true;
