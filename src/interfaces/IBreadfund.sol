@@ -32,8 +32,6 @@ interface IBreadfund {
     address[] members;
     uint256 initialDeposit;
     uint256 fixedDeposit;
-    uint256 depositInterval;
-    uint256 maxWithdrawals;
     uint256 ratio;
     uint256 autoThreshold;
     uint256 contestWindow;
@@ -66,9 +64,7 @@ interface IBreadfund {
     address[] members,
     address token,
     uint256 initialDeposit,
-    uint256 depositInterval,
     uint256 fixedDeposit,
-    uint256 maxWithdrawals,
     uint256 ratio,
     uint256 autoThreshold
   );
@@ -158,9 +154,6 @@ interface IBreadfund {
   /// @notice Thrown if the specified token is not whitelisted
   error TokenNotAllowed();
 
-  /// @notice Thrown for invalid deposit interval
-  error InvalidDepositInterval();
-
   /// @notice Thrown for deposit amounts that do not match requirements
   error InvalidDepositAmount();
 
@@ -185,17 +178,11 @@ interface IBreadfund {
   /// @notice Thrown for bad fixed deposit configuration
   error InvalidFixedDeposit();
 
-  /// @notice Thrown when `maxWithdrawals` is invalid
-  error InvalidMaxWithdrawals();
-
   /// @notice Thrown when `ratio` is invalid
   error InvalidRatio();
 
   /// @notice Thrown when `autoThreshold` is invalid
   error InvalidThreshold();
-
-  /// @notice Thrown when no further withdrawals are allowed
-  error MaxWithdrawsReached();
 
   /// @notice Thrown for invalid request
   error InvalidRequest();
