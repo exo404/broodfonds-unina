@@ -115,9 +115,6 @@ interface IBreadfund {
   /// @notice Thrown when trying to create a duplicate Breadfund
   error AlreadyExists();
 
-  /// @notice Thrown on invalid deposit attempt
-  error InvalidDeposit();
-
   /// @notice Thrown when the Breadfund ID is not found
   error InvalidBreadfund();
 
