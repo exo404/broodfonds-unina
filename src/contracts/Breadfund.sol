@@ -343,8 +343,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
 
   function getUserDepositStatus(address _user) external view returns (bool[] memory) {
     (Breadfund[] memory activeBreadfunds,) = this.getUserActiveBreadfunds(_user);
-    bool[] memory hasDeposited = new bool[](activeBreadfunds.length);
-    return hasDeposited;
+    return new bool[](activeBreadfunds.length);
   }
 
   /// @inheritdoc IBreadfund
