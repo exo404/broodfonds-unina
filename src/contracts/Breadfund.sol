@@ -244,15 +244,149 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
       }
     }
   }
-  /// @inheritdoc IBreadfund
 
+  function getUserActiveBreadfunds(address _user) external view returns (Breadfund[] memory) {
+    uint256[] memory _userBreadfunds = memberBreadfunds[_user];
+    uint256 _activeBreadfundsCount = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        _activeBreadfundsCount++;
+      }
+    }
+
+    Breadfund[] memory activeBreadfunds = new Breadfund[](_activeBreadfundsCount);
+    uint256 _activeIndex = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        activeBreadfunds[_activeIndex] = _breadfund;
+        _activeIndex++;
+      }
+    }
+
+    return activeBreadfunds;
+  }
+
+  function getUserDecommissionedBreadfunds(address _user) external view returns (Breadfund[] memory) {
+    uint256[] memory _userBreadfunds = memberBreadfunds[_user];
+    uint256 _decommissionedBreadfundsCount = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (_isDecommissioned(_breadfund)) {
+        _decommissionedBreadfundsCount++;
+      }
+    }
+
+    Breadfund[] memory decommissionedBreadfunds = new Breadfund[](_decommissionedBreadfundsCount);
+    uint256 _decommissionedIndex = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (_isDecommissioned(_breadfund)) {
+        decommissionedBreadfunds[_decommissionedIndex] = _breadfund;
+        _decommissionedIndex++;
+      }
+    }
+
+    return decommissionedBreadfunds;
+  }
+
+  function getUserWithdrawableBalances(address _user) external view returns (uint256[] memory) {
+    uint256[] memory _userBreadfunds = memberBreadfunds[_user];
+    uint256 _activeBreadfundsCount = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        _activeBreadfundsCount++;
+      }
+    }
+
+    uint256[] memory withdrawableBalances = new uint256[](_activeBreadfundsCount);
+    uint256 _activeIndex = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        withdrawableBalances[_activeIndex] = memberWithdrawableBalance[_breadfundId][_user];
+        _activeIndex++;
+      }
+    }
+
+    return withdrawableBalances;
+  }
+
+  function getUserMonthlyContributions(address _user) external view returns (uint256[] memory) {
+    uint256[] memory _userBreadfunds = memberBreadfunds[_user];
+    uint256 _activeBreadfundsCount = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        _activeBreadfundsCount++;
+      }
+    }
+
+    uint256[] memory monthlyContributions = new uint256[](_activeBreadfundsCount);
+    uint256 _activeIndex = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        monthlyContributions[_activeIndex] = breadfundMemberContribute[_breadfundId][_user];
+        _activeIndex++;
+      }
+    }
+
+    return monthlyContributions;
+  }
+
+  function getUserDepositStatus(address _user) external view returns (bool[] memory) {
+    uint256[] memory _userBreadfunds = memberBreadfunds[_user];
+    uint256 _activeBreadfundsCount = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        _activeBreadfundsCount++;
+      }
+    }
+
+    bool[] memory hasDeposited = new bool[](_activeBreadfundsCount);
+    uint256 _activeIndex = 0;
+
+    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
+      uint256 _breadfundId = _userBreadfunds[i];
+      Breadfund memory _breadfund = breadfunds[_breadfundId];
+      if (!_isDecommissioned(_breadfund)) {
+        hasDeposited[_activeIndex] = hasMadeFirstDeposit[_breadfundId][_user];
+        _activeIndex++;
+      }
+    }
+
+    return hasDeposited;
+  }
+
+  /// @inheritdoc IBreadfund
   function getUserTotalBalance(address _user) external view override returns (uint256 _totalBalance) {
     uint256[] memory _userBreadfunds = memberBreadfunds[_user];
 
     for (uint256 i = 0; i < _userBreadfunds.length; i++) {
       uint256 _breadfundId = _userBreadfunds[i];
       Breadfund memory _breadfund = breadfunds[_breadfundId];
-
       if (!_isDecommissioned(_breadfund)) {
         _totalBalance += memberWithdrawableBalance[_breadfundId][_user];
       }
@@ -273,45 +407,12 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
       Breadfund[] memory decommissionedBreadfunds
     )
   {
-    uint256[] memory _userBreadfunds = memberBreadfunds[_user];
-    uint256 _activeBreadfundsCount = 0;
-    uint256 _decommissionedBreadfundsCount = 0;
-
-    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
-      uint256 _breadfundId = _userBreadfunds[i];
-      Breadfund memory _breadfund = breadfunds[_breadfundId];
-
-      if (!_isDecommissioned(_breadfund)) {
-        _activeBreadfundsCount++;
-      } else {
-        _decommissionedBreadfundsCount++;
-      }
-    }
-
-    activeBreadfunds = new Breadfund[](_activeBreadfundsCount);
-    withdrawableBalances = new uint256[](_activeBreadfundsCount);
-    monthlyContributions = new uint256[](_activeBreadfundsCount);
-    hasDeposited = new bool[](_activeBreadfundsCount);
-    decommissionedBreadfunds = new Breadfund[](_decommissionedBreadfundsCount);
-
-    uint256 _activeIndex = 0;
-    uint256 _decommissionedIndex = 0;
-    for (uint256 i = 0; i < _userBreadfunds.length; i++) {
-      uint256 _breadfundId = _userBreadfunds[i];
-      Breadfund memory _breadfund = breadfunds[_breadfundId];
-
-      if (!_isDecommissioned(_breadfund)) {
-        activeBreadfunds[_activeIndex] = _breadfund;
-        withdrawableBalances[_activeIndex] = memberWithdrawableBalance[_breadfundId][_user];
-        monthlyContributions[_activeIndex] = breadfundMemberContribute[_breadfundId][_user];
-        hasDeposited[_activeIndex] = hasMadeFirstDeposit[_breadfundId][_user];
-        totalBalance += withdrawableBalances[_activeIndex];
-        _activeIndex++;
-      } else {
-        decommissionedBreadfunds[_decommissionedIndex] = _breadfund;
-        _decommissionedIndex++;
-      }
-    }
+    activeBreadfunds = this.getUserActiveBreadfunds(_user);
+    withdrawableBalances = this.getUserWithdrawableBalances(_user);
+    monthlyContributions = this.getUserMonthlyContributions(_user);
+    hasDeposited = this.getUserDepositStatus(_user);
+    totalBalance = this.getUserTotalBalance(_user);
+    decommissionedBreadfunds = this.getUserDecommissionedBreadfunds(_user);
   }
 
   /// @inheritdoc IBreadfund
