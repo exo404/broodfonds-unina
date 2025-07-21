@@ -12,6 +12,7 @@ interface IBreadfund {
                             STRUCTS
   //////////////////////////////////////////////////////////////*/
 
+
   /// @notice Struct defining a Breadfund group
   /// @param owner The creator of the Breadfund
   /// @param minimumMembers Minimum number of members required to create a Breadfund
@@ -24,6 +25,8 @@ interface IBreadfund {
   /// @param fixedDeposit Fixed deposit fee amount
   /// @param contestWindow Duration of the contest period for requests
   /// @param votingWindow Duration of the voting period for requests
+  /// @param currentEpoch Current epoch index
+  /// @param epochDuration Duration of each epoch in seconds
   struct Breadfund {
     address owner;
     uint256 minimumMembers;
@@ -38,6 +41,8 @@ interface IBreadfund {
     uint256 autoThreshold;
     uint256 contestWindow;
     uint256 votingWindow;
+    uint256 currentEpoch;
+    uint256 epochDuration;
   }
 
   /// @notice Struct defining a withdraw request within a Breadfund
@@ -71,7 +76,8 @@ interface IBreadfund {
     uint256 initialDeposit,
     uint256 fixedDeposit,
     uint256 ratio,
-    uint256 autoThreshold
+    uint256 autoThreshold,
+    uint256 epochDuration
   );
 
   /// @notice Emitted when a Breadfund is decommissioned
@@ -109,6 +115,9 @@ interface IBreadfund {
 
   /// @notice Emitted when a request is rejected and funds are withdrawn
   event WithdrawalRejected(uint256 indexed requestId, address indexed owner, uint256 timestamp);
+
+  /// @notice Emitted when all members complete an epoch
+  event EpochCompleted(uint256 indexed breadfundId, uint256 indexed epochIndex, uint256 completionTime);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -207,6 +216,9 @@ interface IBreadfund {
   /// @notice Thrown if the request is not votable
   error VotingWindowClosed();
 
+  /// @notice Thrown when epoch duration is invalid
+  error InvalidEpochDuration();
+
   /*///////////////////////////////////////////////////////////////
                             EXTERNAL
   //////////////////////////////////////////////////////////////*/
@@ -296,4 +308,21 @@ interface IBreadfund {
   /// @param token ERC20 token address
   /// @return allowed True if the token is allowed, false otherwise
   function isTokenAllowed(address token) external view returns (bool);
+
+  /// @notice Gets the current epoch index for a Breadfund (calculated from time)
+  /// @param breadfundId The Breadfund ID
+  /// @return epochIndex The current epoch index based on time elapsed
+  function getCurrentEpochIndex(uint256 breadfundId) external view returns (uint256);
+
+  /// @notice Checks if all members have made deposits for all epochs since inception
+  /// @param breadfundId The Breadfund ID
+  /// @return allDepositsComplete True if every member has deposited for every completed epoch
+  function hasAllMembersDepositedForAllEpochs(uint256 breadfundId) external view returns (bool);
+
+  /// @notice Checks if a member has deposited in a specific epoch
+  /// @param breadfundId The Breadfund ID
+  /// @param member The member address
+  /// @param epochIndex The epoch index to check
+  /// @return hasDeposited True if the member deposited in that epoch
+  function hasMemberDepositedInEpoch(uint256 breadfundId, address member, uint256 epochIndex) external view returns (bool);
 }
