@@ -25,10 +25,18 @@ This document describes the comprehensive test suite for the epoch/round functio
 - `testHasAllMembersDepositedForAllEpochs_MultipleEpochs()` - Multi-epoch verification
 - `testHasAllMembersDepositedForAllEpochs_SkippedEpoch()` - Detects missed epochs
 
+#### ✅ **Decommission Integration Tests**
+- `testDecommissionRequiresAllEpochsComplete()` - Decommission only allowed after all epochs complete
+- `testDecommissionFailsWithIncompleteEpochs()` - Prevents decommission with incomplete epochs
+- `testDecommissionSucceedsWithAllEpochsComplete()` - Successful decommission after full participation
+- `testDecommissionFailsWithSkippedEpoch()` - Prevents decommission when epochs are skipped
+
 #### ✅ **Edge Case Tests**
 - `testEpochIndexBeforeBreadfundStart()` - Behavior before breadfund activation
 - `testInvalidBreadfundId()` - Handling of non-existent breadfunds
 - `testDepositBeforeBreadfundStart()` - Deposit prevention before start time
+- `testBoundaryConditions()` - Epoch transitions at exact boundaries
+- `testLongRunningEpochs()` - Extended time period testing
 
 ## Key Test Scenarios
 
@@ -69,7 +77,8 @@ All tests should pass, confirming:
 2. **Deposit Tracking**: Per-member, per-epoch deposit recording
 3. **Completion Detection**: Proper tracking when all members participate
 4. **Historical Verification**: Complete participation tracking across all epochs
-5. **Error Handling**: Proper rejection of invalid operations
+5. **Decommission Integration**: Only allows decommission when all epochs are complete
+6. **Error Handling**: Proper rejection of invalid operations
 
 ## Usage
 

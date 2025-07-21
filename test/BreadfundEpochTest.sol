@@ -344,4 +344,98 @@ contract BreadfundEpochTest is Test {
         vm.warp(startTime + EPOCH_DURATION + 1);
         assertEq(breadfund.getCurrentEpochIndex(breadfundId), 1);
     }
+    
+    function testDecommissionRequiresAllEpochsComplete() public {
+        // Try to decommission without any deposits - should fail
+        vm.expectRevert(IBreadfund.NotDecommissionable.selector);
+        breadfund.decommission(breadfundId);
+        
+        // All members deposit in epoch 0
+        vm.prank(member1);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member2);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member3);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        
+        // Should now be able to decommission
+        breadfund.decommission(breadfundId);
+        
+        // Verify breadfund is decommissioned by checking it reverts on getBreadfund
+        vm.expectRevert(IBreadfund.NotCommissioned.selector);
+        breadfund.getBreadfund(breadfundId);
+    }
+    
+    function testDecommissionFailsWithIncompleteEpochs() public {
+        // All members deposit in epoch 0
+        vm.prank(member1);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member2);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member3);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        
+        // Move to epoch 1
+        vm.warp(block.timestamp + EPOCH_DURATION);
+        
+        // Only partial deposits in epoch 1
+        vm.prank(member1);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member2);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        // member3 hasn't deposited in epoch 1
+        
+        // Should fail to decommission
+        vm.expectRevert(IBreadfund.NotDecommissionable.selector);
+        breadfund.decommission(breadfundId);
+    }
+    
+    function testDecommissionSucceedsWithAllEpochsComplete() public {
+        // Complete epoch 0
+        vm.prank(member1);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member2);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member3);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        
+        // Move to epoch 1
+        vm.warp(block.timestamp + EPOCH_DURATION);
+        
+        // Complete epoch 1
+        vm.prank(member1);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member2);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member3);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        
+        // Should succeed now
+        breadfund.decommission(breadfundId);
+    }
+    
+    function testDecommissionFailsWithSkippedEpoch() public {
+        // Complete epoch 0
+        vm.prank(member1);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member2);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member3);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        
+        // Skip epoch 1, jump to epoch 2
+        vm.warp(block.timestamp + 2 * EPOCH_DURATION);
+        
+        // Complete epoch 2
+        vm.prank(member1);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member2);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        vm.prank(member3);
+        breadfund.deposit(breadfundId, MEMBER_DEPOSIT);
+        
+        // Should fail because epoch 1 was skipped
+        vm.expectRevert(IBreadfund.NotDecommissionable.selector);
+        breadfund.decommission(breadfundId);
+    }
 }
