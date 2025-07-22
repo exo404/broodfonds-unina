@@ -199,42 +199,11 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     emit WithdrawalContested(_requestId, _request.owner, block.timestamp);
   }
 
-  /// @inheritdoc IBreadfund
-  function executeWithdrawal(uint256 _idRequest) external override nonReentrant {
-    Request memory _request = requests[_idRequest];
-    if (isExecuted[_idRequest]) revert AlreadyExecuted();
-
-    Breadfund memory _breadfund = breadfunds[_request.breadfundId];
-
-    // Case 1: Auto-execution after contest window (uncontested)
-    if (!_isContestable(_idRequest)) {
-      if (!isContested[_idRequest]) {
-        isExecuted[_idRequest] = true;
-        emit WithdrawalAutoExecuted(_idRequest, _request.owner, _request.amount);
-        if (!IERC20(_breadfund.token).transfer(_request.owner, _request.amount)) revert TransferFailed();
-        return;
-      } else {
-        emit WithdrawalContested(_idRequest, _request.owner, block.timestamp);
-        return;
-      }
-    }
-
-    // Case 2: Execute approved request (anyone can call this)
-    if (isVoted[_idRequest] && _request.yesVotes > _breadfund.members.length * _breadfund.consensusThreshold / 100) {
-      isExecuted[_idRequest] = true;
-      emit WithdrawalApproved(_idRequest, _request.owner, _request.amount);
-      if (!IERC20(_breadfund.token).transfer(_request.owner, _request.amount)) revert TransferFailed();
-      return;
-    }
-
-    // If none of the above conditions are met, the request cannot be executed
-    revert InvalidRequest();
-  }
-
   function vote(uint256 _requestId, bool _vote) external override nonReentrant {
     if (!isMember[requests[_requestId].breadfundId][msg.sender]) revert NotMember();
     if (requestVotes[_requestId][msg.sender]) revert AlreadyVoted();
     if (!_isVotingOngoing(_requestId)) revert VotingWindowClosed();
+    if (isExecuted[_requestId]) revert AlreadyExecuted();
 
     if (_vote) {
       requests[_requestId].yesVotes++;
@@ -243,17 +212,26 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     }
     requestVotes[_requestId][msg.sender] = true;
     emit Voted(_requestId, msg.sender, _vote);
+
+    // Check if consensus has been reached after this vote
+    Request memory _request = requests[_requestId];
+    Breadfund memory _breadfund = breadfunds[_request.breadfundId];
+
+    if (_request.yesVotes > _breadfund.members.length * _breadfund.consensusThreshold / 100) {
+      // Consensus reached - execute withdrawal immediately
+      _executeWithdrawal(_requestId);
+    }
   }
   /// @inheritdoc IBreadfund
 
   function checkVotingWindow(uint256 _idRequest) external override nonReentrant {
     Request memory _request = requests[_idRequest];
-    if (!_isVotingOngoing(_idRequest) && !isVoted[_idRequest]) {
+    if (!_isVotingOngoing(_idRequest) && !isVoted[_idRequest] && !isExecuted[_idRequest]) {
       isVoted[_idRequest] = true;
       Breadfund memory _breadfund = breadfunds[_request.breadfundId];
       if (_request.yesVotes > _breadfund.members.length * _breadfund.consensusThreshold / 100) {
-        // Mark as voted/approved, but don't execute here - let executeWithdrawal handle execution
-        emit WithdrawalPending(_idRequest, _request.owner, _request.amount);
+        // If somehow consensus was reached but not executed during voting, execute now
+        _executeWithdrawal(_idRequest);
       } else {
         emit WithdrawalRejected(_idRequest, _request.owner, _request.amount);
       }
@@ -303,6 +281,16 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     }
 
     return (_breadfund.members, _balances);
+  }
+
+  /// @dev Internal function to execute approved withdrawal requests
+  function _executeWithdrawal(uint256 _idRequest) internal {
+    Request memory _request = requests[_idRequest];
+    Breadfund memory _breadfund = breadfunds[_request.breadfundId];
+
+    isExecuted[_idRequest] = true;
+    emit WithdrawalApproved(_idRequest, _request.owner, _request.amount);
+    if (!IERC20(_breadfund.token).transfer(_request.owner, _request.amount)) revert TransferFailed();
   }
 
   /**
