@@ -254,6 +254,10 @@ interface IBreadfund {
   /// @param requestId The ID of the request to contest
   function contest(uint256 requestId) external;
 
+  /// @notice Checks if a request can be contested
+  /// @param requestId The ID of the request to check
+  function executeWithdrawal(uint256 requestId) external;
+
   /// @notice Casts a vote on a request
   /// @param requestId The ID of the request
   /// @param voteValue True for yes, false for no

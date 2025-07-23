@@ -199,6 +199,27 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
     emit WithdrawalContested(_requestId, _request.owner, block.timestamp);
   }
 
+  /// @inheritdoc IBreadfund
+  function executeWithdrawal(uint256 _idRequest) external override nonReentrant {
+    Request memory _request = requests[_idRequest];
+    if (isExecuted[_idRequest]) revert AlreadyExecuted();
+
+    Breadfund memory _breadfund = breadfunds[_request.breadfundId];
+
+    // Case 1: Auto-execution after contest window (uncontested)
+    if (!_isContestable(_idRequest)) {
+      if (!isContested[_idRequest]) {
+        isExecuted[_idRequest] = true;
+        emit WithdrawalAutoExecuted(_idRequest, _request.owner, _request.amount);
+        if (!IERC20(_breadfund.token).transfer(_request.owner, _request.amount)) revert TransferFailed();
+        return;
+      } else {
+        emit WithdrawalContested(_idRequest, _request.owner, block.timestamp);
+        return;
+      }
+    }
+  }
+
   function vote(uint256 _requestId, bool _vote) external override nonReentrant {
     if (!isMember[requests[_requestId].breadfundId][msg.sender]) revert NotMember();
     if (requestVotes[_requestId][msg.sender]) revert AlreadyVoted();
