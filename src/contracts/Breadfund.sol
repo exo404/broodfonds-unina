@@ -13,15 +13,6 @@ import {IBreadfund} from '../interfaces/IBreadfund.sol';
 /// @author @valeriooconte
 /// @author @RonTuretzky
 contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
-  /// @notice Minimum number of members required to create a Breadfund
-  uint256 public constant MINIMUM_MEMBERS = 25;
-
-  /// @notice Maximum number of members allowed in a Breadfund
-  uint256 public constant MAXIMUM_MEMBERS = 50;
-
-  /// @notice Number of days in a month (used for calculating monthly withdrawals)
-  uint256 public constant DAYS_IN_A_MONTH = 30;
-
   /// @notice ID counter used to assign unique identifiers to each Breadfund
   uint256 public nextId;
 
@@ -383,7 +374,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   function _getDailyWithdrawableAmount(uint256 _id, address _member, uint256 _ratio) internal view returns (uint256) {
     uint256 _memberContribute = breadfundMemberContribute[_id][_member];
     uint256 _monthlyWithdrawalAmount = _memberContribute * _ratio;
-    return _monthlyWithdrawalAmount / DAYS_IN_A_MONTH;
+    return _monthlyWithdrawalAmount / 30;
   }
 
   /// @dev Check if a request is contestable by comparing the current timestamp with the request's timestamp and the contest window
