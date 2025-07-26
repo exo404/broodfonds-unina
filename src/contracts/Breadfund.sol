@@ -13,6 +13,9 @@ import {IBreadfund} from '../interfaces/IBreadfund.sol';
 /// @author @valeriooconte
 /// @author @RonTuretzky
 contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
+  /// @notice Number of days in a month (used for calculating monthly withdrawals)
+  uint256 public constant DAYS_IN_A_MONTH = 30;
+
   /// @notice ID counter used to assign unique identifiers to each Breadfund
   uint256 public nextId;
 
@@ -191,13 +194,12 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   }
 
   /// @inheritdoc IBreadfund
-  function executeWithdrawal(uint256 _idRequest) external override nonReentrant {
+  function contestWindow(uint256 _idRequest) external override nonReentrant {
     Request memory _request = requests[_idRequest];
     if (isExecuted[_idRequest]) revert AlreadyExecuted();
 
     Breadfund memory _breadfund = breadfunds[_request.breadfundId];
 
-    // Case 1: Auto-execution after contest window (uncontested)
     if (!_isContestable(_idRequest)) {
       if (!isContested[_idRequest]) {
         isExecuted[_idRequest] = true;
@@ -374,7 +376,7 @@ contract Breadfund is IBreadfund, ReentrancyGuard, OwnableUpgradeable {
   function _getDailyWithdrawableAmount(uint256 _id, address _member, uint256 _ratio) internal view returns (uint256) {
     uint256 _memberContribute = breadfundMemberContribute[_id][_member];
     uint256 _monthlyWithdrawalAmount = _memberContribute * _ratio;
-    return _monthlyWithdrawalAmount / 30;
+    return _monthlyWithdrawalAmount / DAYS_IN_A_MONTH;
   }
 
   /// @dev Check if a request is contestable by comparing the current timestamp with the request's timestamp and the contest window
